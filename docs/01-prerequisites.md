@@ -1,54 +1,43 @@
 # Prerequisites
 
-## Google Cloud Platform
+## VM Hardware Requirements
 
-This tutorial leverages the [Google Cloud Platform](https://cloud.google.com/) to streamline provisioning of the compute infrastructure required to bootstrap a Kubernetes cluster from the ground up. [Sign up](https://cloud.google.com/free/) for $300 in free credits.
+Preferably 16GB of RAM, 50GB of disk space.
 
-[Estimated cost](https://cloud.google.com/products/calculator#id=873932bc-0840-4176-b0fa-a8cfd4ca61ae) to run this tutorial: $0.23 per hour ($5.50 per day).
+This tutorial leverages the [LXC](https://linuxcontainers.org/lxc/getting-started/) to streamline provisioning of the
+compute infrastructure required to bootstrap a Kubernetes cluster from the ground up.
 
-> The compute resources required for this tutorial exceed the Google Cloud Platform free tier.
+## VirtualBox
 
-## Google Cloud Platform SDK
+Download and Install [VirtualBox](https://www.virtualbox.org/wiki/Downloads) on any one of the supported platforms:
 
-### Install the Google Cloud SDK
+- Windows hosts
+- OS X hosts
+- Linux distributions
+- Solaris hosts
 
-Follow the Google Cloud SDK [documentation](https://cloud.google.com/sdk/) to install and configure the `gcloud` command line utility.
+## Vagrant
 
-Verify the Google Cloud SDK version is 338.0.0 or higher:
+Once VirtualBox is installed you may choose to deploy virtual machines manually on it.
+Vagrant provides an easier way to deploy multiple virtual machines on VirtualBox more consistently.
 
-```
-gcloud version
-```
+Download and Install [Vagrant](https://www.vagrantup.com/downloads) on your platform.
 
-### Set a Default Compute Region and Zone
+- Windows
+- Debian
+- Centos
+- Linux
+- macOS
 
-This tutorial assumes a default compute region and zone have been configured.
+## Verification
 
-If you are using the `gcloud` command-line tool for the first time `init` is the easiest way to do this:
+`vagrant -v`:
 
-```
-gcloud init
-```
-
-Then be sure to authorize gcloud to access the Cloud Platform with your Google user credentials:
-
-```
-gcloud auth login
-```
-
-Next set a default compute region and compute zone:
+> Output
 
 ```
-gcloud config set compute/region us-west1
+2.2.19
 ```
-
-Set a default compute zone:
-
-```
-gcloud config set compute/zone us-west1-c
-```
-
-> Use the `gcloud compute zones list` command to view additional regions and zones.
 
 ## Running Commands in Parallel with tmux
 

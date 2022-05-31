@@ -1,227 +1,108 @@
 # Provisioning Compute Resources
 
-Kubernetes requires a set of machines to host the Kubernetes control plane and the worker nodes where containers are ultimately run. In this lab you will provision the compute resources required for running a secure and highly available Kubernetes cluster across a single [compute zone](https://cloud.google.com/compute/docs/regions-zones/regions-zones).
+Clone this repository and execute `vagrant up` at the root directory. This does the below:
 
-> Ensure a default compute zone and region have been set as described in the [Prerequisites](01-prerequisites.md#set-a-default-compute-region-and-zone) lab.
+- Deploys 7 VMs: 3 masters, 3 workers and 1 load balancer with the name `kube-*`
+  
+  > This is the default settings. This can be changed at the top of the Vagrant file.
 
-## Networking
+- Set's IP addresses in the range 192.168.33.X
+  
+  | VM       | VM Name       | Purpose      | IP            | Forwarded Port |
+  | -------- | ------------- | ------------ | ------------- | -------------- |
+  | master-1 | kube-master-1 | Master       | 192.168.33.10 | 3210           |
+  | master-2 | kube-master-2 | Master       | 192.168.33.11 | 3111           |
+  | master-3 | kube-master-2 | Master       | 192.168.33.12 | 3212           |
+  | worker-1 | kube-worker-1 | Worker       | 192.168.33.20 | 3220           |
+  | worker-2 | kube-worker-2 | Worker       | 192.168.33.21 | 3221           |
+  | worker-3 | kube-worker-2 | Worker       | 192.168.33.22 | 3222           |
+  | lb-0     | kube-lb       | LoadBalancer | 192.168.33.30 | 3230           |
 
-The Kubernetes [networking model](https://kubernetes.io/docs/concepts/cluster-administration/networking/#kubernetes-model) assumes a flat network in which containers and nodes can communicate with each other. In cases where this is not desired [network policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/) can limit how groups of containers are allowed to communicate with each other and external network endpoints.
+## SSH to the nodes
 
-> Setting up network policies is out of scope for this tutorial.
+There are two ways to SSH into the nodes:
 
-### Virtual Private Cloud Network
+### 1. SSH using Vagrant
 
-In this section a dedicated [Virtual Private Cloud](https://cloud.google.com/compute/docs/networks-and-firewalls#networks) (VPC) network will be setup to host the Kubernetes cluster.
+From the directory you ran the `vagrant up` command, run `vagrant ssh <vm>`, e.g: `vagrant ssh master-1`.
 
-Create the `kubernetes-the-hard-way` custom VPC network:
+> Note: Use VM field from the above table and not the vm name itself.
 
-```
-gcloud compute networks create kubernetes-the-hard-way --subnet-mode custom
-```
+### 2. SSH Using SSH Client Tools
 
-A [subnet](https://cloud.google.com/compute/docs/vpc/#vpc_networks_and_subnets) must be provisioned with an IP address range large enough to assign a private IP address to each node in the Kubernetes cluster.
+Use your favourite SSH terminal tool. 
 
-Create the `kubernetes` subnet in the `kubernetes-the-hard-way` VPC network:
+Use the above IP addresses. Username and password based SSH is disabled by default. Vagrant generates a private key for each of these VMs. It is placed under the `.vagrant` folder (in the directory you ran the `vagrant up` command from) at the below path for each VM:
 
-```
-gcloud compute networks subnets create kubernetes \
-  --network kubernetes-the-hard-way \
-  --range 10.240.0.0/24
-```
+- **Private key path:** `.vagrant/machines/<vm>/virtualbox/private_key`
+- **Username:** `vagrant`
 
-> The `10.240.0.0/24` IP address range can host up to 254 compute instances.
+### 3. SSH from the host
 
-### Firewall Rules
+> This is the recommended approach, and we will be using this to provision nodes in the next labs
 
-Create a firewall rule that allows internal communication across all protocols:
+- Make sure you update the host entries to include nodes' IPs:
+  
+  For Linux, the host file resign under `/etc/hosts`:
+  
+  ```
+  192.168.33.10 master-0
+  192.168.33.11 master-1
+  192.168.33.12 master-2
+  
+  192.168.33.20 worker-0
+  192.168.33.21 worker-1
+  192.168.33.22 worker-2
+  
+  192.168.33.30 lb-0
+  ```
 
-```
-gcloud compute firewall-rules create kubernetes-the-hard-way-allow-internal \
-  --allow tcp,udp,icmp \
-  --network kubernetes-the-hard-way \
-  --source-ranges 10.240.0.0/24,10.200.0.0/16
-```
+- Login into each node as a `root` user and add your SSH key
 
-Create a firewall rule that allows external SSH, ICMP, and HTTPS:
+- Create SSH profile for each node:
+  
+  ```
+  Host master-0
+      HostName 192.168.33.10
+      User root
+      IdentityFile ~/.ssh/id_rsa
+  Host master-1
+      HostName 192.168.33.11
+      User root
+      IdentityFile ~/.ssh/id_rsa
+  Host master-2
+      HostName 192.168.33.12
+      User root
+      IdentityFile ~/.ssh/id_rsa
+  Host worker-0
+      HostName 192.168.33.20
+      User root
+      IdentityFile ~/.ssh/id_rsa
+  Host worker-1
+      HostName 192.168.33.21
+      User root
+      IdentityFile ~/.ssh/id_rsa
+  Host worker-2
+      HostName 192.168.33.22
+      User root
+      IdentityFile ~/.ssh/id_rsa
+  Host lb-0
+      HostName 192.168.33.30
+      User root
+      IdentityFile ~/.ssh/id_rsa
+  ```
 
-```
-gcloud compute firewall-rules create kubernetes-the-hard-way-allow-external \
-  --allow tcp:22,tcp:6443,icmp \
-  --network kubernetes-the-hard-way \
-  --source-ranges 0.0.0.0/0
-```
+## Verify Environment
 
-> An [external load balancer](https://cloud.google.com/compute/docs/load-balancing/network/) will be used to expose the Kubernetes API Servers to remote clients.
+- Ensure all VMs are up
+- Ensure VMs are assigned the above IP addresses
+- Ensure you can SSH into these VMs using SSH profile
+- Ensure the VMs can ping each other
 
-List the firewall rules in the `kubernetes-the-hard-way` VPC network:
+Useful commands:
 
-```
-gcloud compute firewall-rules list --filter="network:kubernetes-the-hard-way"
-```
-
-> output
-
-```
-NAME                                    NETWORK                  DIRECTION  PRIORITY  ALLOW                 DENY  DISABLED
-kubernetes-the-hard-way-allow-external  kubernetes-the-hard-way  INGRESS    1000      tcp:22,tcp:6443,icmp        False
-kubernetes-the-hard-way-allow-internal  kubernetes-the-hard-way  INGRESS    1000      tcp,udp,icmp                Fals
-```
-
-### Kubernetes Public IP Address
-
-Allocate a static IP address that will be attached to the external load balancer fronting the Kubernetes API Servers:
-
-```
-gcloud compute addresses create kubernetes-the-hard-way \
-  --region $(gcloud config get-value compute/region)
-```
-
-Verify the `kubernetes-the-hard-way` static IP address was created in your default compute region:
-
-```
-gcloud compute addresses list --filter="name=('kubernetes-the-hard-way')"
-```
-
-> output
-
-```
-NAME                     ADDRESS/RANGE   TYPE      PURPOSE  NETWORK  REGION    SUBNET  STATUS
-kubernetes-the-hard-way  XX.XXX.XXX.XXX  EXTERNAL                    us-west1          RESERVED
-```
-
-## Compute Instances
-
-The compute instances in this lab will be provisioned using [Ubuntu Server](https://www.ubuntu.com/server) 20.04, which has good support for the [containerd container runtime](https://github.com/containerd/containerd). Each compute instance will be provisioned with a fixed private IP address to simplify the Kubernetes bootstrapping process.
-
-### Kubernetes Controllers
-
-Create three compute instances which will host the Kubernetes control plane:
-
-```
-for i in 0 1 2; do
-  gcloud compute instances create controller-${i} \
-    --async \
-    --boot-disk-size 200GB \
-    --can-ip-forward \
-    --image-family ubuntu-2004-lts \
-    --image-project ubuntu-os-cloud \
-    --machine-type e2-standard-2 \
-    --private-network-ip 10.240.0.1${i} \
-    --scopes compute-rw,storage-ro,service-management,service-control,logging-write,monitoring \
-    --subnet kubernetes \
-    --tags kubernetes-the-hard-way,controller
-done
-```
-
-### Kubernetes Workers
-
-Each worker instance requires a pod subnet allocation from the Kubernetes cluster CIDR range. The pod subnet allocation will be used to configure container networking in a later exercise. The `pod-cidr` instance metadata will be used to expose pod subnet allocations to compute instances at runtime.
-
-> The Kubernetes cluster CIDR range is defined by the Controller Manager's `--cluster-cidr` flag. In this tutorial the cluster CIDR range will be set to `10.200.0.0/16`, which supports 254 subnets.
-
-Create three compute instances which will host the Kubernetes worker nodes:
-
-```
-for i in 0 1 2; do
-  gcloud compute instances create worker-${i} \
-    --async \
-    --boot-disk-size 200GB \
-    --can-ip-forward \
-    --image-family ubuntu-2004-lts \
-    --image-project ubuntu-os-cloud \
-    --machine-type e2-standard-2 \
-    --metadata pod-cidr=10.200.${i}.0/24 \
-    --private-network-ip 10.240.0.2${i} \
-    --scopes compute-rw,storage-ro,service-management,service-control,logging-write,monitoring \
-    --subnet kubernetes \
-    --tags kubernetes-the-hard-way,worker
-done
-```
-
-### Verification
-
-List the compute instances in your default compute zone:
-
-```
-gcloud compute instances list --filter="tags.items=kubernetes-the-hard-way"
-```
-
-> output
-
-```
-NAME          ZONE        MACHINE_TYPE   PREEMPTIBLE  INTERNAL_IP  EXTERNAL_IP    STATUS
-controller-0  us-west1-c  e2-standard-2               10.240.0.10  XX.XX.XX.XXX   RUNNING
-controller-1  us-west1-c  e2-standard-2               10.240.0.11  XX.XXX.XXX.XX  RUNNING
-controller-2  us-west1-c  e2-standard-2               10.240.0.12  XX.XXX.XX.XXX  RUNNING
-worker-0      us-west1-c  e2-standard-2               10.240.0.20  XX.XX.XXX.XXX  RUNNING
-worker-1      us-west1-c  e2-standard-2               10.240.0.21  XX.XX.XX.XXX   RUNNING
-worker-2      us-west1-c  e2-standard-2               10.240.0.22  XX.XXX.XX.XX   RUNNING
-```
-
-## Configuring SSH Access
-
-SSH will be used to configure the controller and worker instances. When connecting to compute instances for the first time SSH keys will be generated for you and stored in the project or instance metadata as described in the [connecting to instances](https://cloud.google.com/compute/docs/instances/connecting-to-instance) documentation.
-
-Test SSH access to the `controller-0` compute instances:
-
-```
-gcloud compute ssh controller-0
-```
-
-If this is your first time connecting to a compute instance SSH keys will be generated for you. Enter a passphrase at the prompt to continue:
-
-```
-WARNING: The public SSH key file for gcloud does not exist.
-WARNING: The private SSH key file for gcloud does not exist.
-WARNING: You do not have an SSH key for gcloud.
-WARNING: SSH keygen will be executed to generate a key.
-Generating public/private rsa key pair.
-Enter passphrase (empty for no passphrase):
-Enter same passphrase again:
-```
-
-At this point the generated SSH keys will be uploaded and stored in your project:
-
-```
-Your identification has been saved in /home/$USER/.ssh/google_compute_engine.
-Your public key has been saved in /home/$USER/.ssh/google_compute_engine.pub.
-The key fingerprint is:
-SHA256:nz1i8jHmgQuGt+WscqP5SeIaSy5wyIJeL71MuV+QruE $USER@$HOSTNAME
-The key's randomart image is:
-+---[RSA 2048]----+
-|                 |
-|                 |
-|                 |
-|        .        |
-|o.     oS        |
-|=... .o .o o     |
-|+.+ =+=.+.X o    |
-|.+ ==O*B.B = .   |
-| .+.=EB++ o      |
-+----[SHA256]-----+
-Updating project ssh metadata...-Updated [https://www.googleapis.com/compute/v1/projects/$PROJECT_ID].
-Updating project ssh metadata...done.
-Waiting for SSH key to propagate.
-```
-
-After the SSH keys have been updated you'll be logged into the `controller-0` instance:
-
-```
-Welcome to Ubuntu 20.04.2 LTS (GNU/Linux 5.4.0-1042-gcp x86_64)
-...
-```
-
-Type `exit` at the prompt to exit the `controller-0` compute instance:
-
-```
-$USER@controller-0:~$ exit
-```
-> output
-
-```
-logout
-Connection to XX.XX.XX.XXX closed
-```
+- `vagrant up <vm>` to start up a VIM
+- `vagrant halt <vm>` to shut down a VM gracefully
+- `vagrant destroy <vm>` to completely remove a VM
 
 Next: [Provisioning a CA and Generating TLS Certificates](04-certificate-authority.md)

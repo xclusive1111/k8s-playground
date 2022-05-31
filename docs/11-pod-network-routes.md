@@ -6,55 +6,51 @@ In this lab you will create a route for each worker node that maps the node's Po
 
 > There are [other ways](https://kubernetes.io/docs/concepts/cluster-administration/networking/#how-to-achieve-this) to implement the Kubernetes networking model.
 
-## The Routing Table
+Run a sample pods
 
-In this section you will gather the information required to create routes in the `kubernetes-the-hard-way` VPC network.
-
-Print the internal IP address and Pod CIDR range for each worker instance:
-
-```
-for instance in worker-0 worker-1 worker-2; do
-  gcloud compute instances describe ${instance} \
-    --format 'value[separator=" "](networkInterfaces[0].networkIP,metadata.items[0].value)'
-done
+```shell
+kubectl run box1 -it --rm --image busybox -- sh
+kubectl run box2 -it --rm --image busybox -- sh
 ```
 
-> output
+Ensure the both pods are running
 
-```
-10.240.0.20 10.200.0.0/24
-10.240.0.21 10.200.1.0/24
-10.240.0.22 10.200.2.0/24
+```shell
+kubectl get pods -o wide
 ```
 
-## Routes
+ At this point, two boxes cannot ping each other.
 
-Create network routes for each worker instance:
+## Deploy Weave Network
 
-```
-for i in 0 1 2; do
-  gcloud compute routes create kubernetes-route-10-200-${i}-0-24 \
-    --network kubernetes-the-hard-way \
-    --next-hop-address 10.240.0.2${i} \
-    --destination-range 10.200.${i}.0/24
-done
+Run the following only once on the `master` node:
+
+```shell
+CLUSTER_CIDR=10.200.0.0/16
+kubectl --kubeconfig admin.kubeconfig apply -f "https://cloud.weave.works/k8s/net?&env.IPALLOC_RANGE=${CLUSTER_CIDR}&k8s-version=$(kubectl version | base64 | tr -d '\n')"
 ```
 
-List the routes in the `kubernetes-the-hard-way` VPC network:
+> `CLUSTER_CIDR` must be inclined with the `--cluster-cidr` option when bootstraping Kubernetes controllers. Weave uses POD CIDR of `10.32.0.0/12` by default
+
+Verify deployment:
+
+```shell
+kubectl --kubeconfig admin.kubeconfig get pods -n kube-system
+```
+
+Result:
 
 ```
-gcloud compute routes list --filter "network: kubernetes-the-hard-way"
+NAME              READY   STATUS    RESTARTS        AGE
+weave-net-6nvjd   2/2     Running   1 (2m20s ago)   3m2s
+weave-net-nlrn5   2/2     Running   1 (2m19s ago)   3m2s
+weave-net-pc74n   2/2     Running   1 (2m19s ago)   3m2s
 ```
 
-> output
+Check weave status:
 
-```
-NAME                            NETWORK                  DEST_RANGE     NEXT_HOP                  PRIORITY
-default-route-1606ba68df692422  kubernetes-the-hard-way  10.240.0.0/24  kubernetes-the-hard-way   0
-default-route-615e3652a8b74e4d  kubernetes-the-hard-way  0.0.0.0/0      default-internet-gateway  1000
-kubernetes-route-10-200-0-0-24  kubernetes-the-hard-way  10.200.0.0/24  10.240.0.20               1000
-kubernetes-route-10-200-1-0-24  kubernetes-the-hard-way  10.200.1.0/24  10.240.0.21               1000
-kubernetes-route-10-200-2-0-24  kubernetes-the-hard-way  10.200.2.0/24  10.240.0.22               1000
+```shell
+kubectl exec -n kube-system weave-net-6nvjd -c weave -- /home/weave/weave --local status
 ```
 
 Next: [Deploying the DNS Cluster Add-on](12-dns-addon.md)
