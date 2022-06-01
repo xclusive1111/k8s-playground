@@ -125,12 +125,10 @@ ETCDCTL_API=3 etcdctl member list \
   --key=/etc/etcd/kubernetes-key.pem
 ```
 
-> output
-
 ```
-3a57933972cb5131, started, master-2, https://10.209.223.206:2380, https://10.209.223.206:2379, false
-f98dc20bce6225a0, started, master-0, https://10.209.223.25:2380, https://10.209.223.25:2379, false
-ffed16798470cab5, started, master-1, https://10.209.223.242:2380, https://10.209.223.242:2379, false
+12686a56262ba9c6, started, master-1, https://192.168.33.11:2380, https://192.168.33.11:2379, false
+343245731c8534ff, started, master-2, https://192.168.33.12:2380, https://192.168.33.12:2379, false
+7473d5f4df8d1b3c, started, master-0, https://192.168.33.10:2380, https://192.168.33.10:2379, false
 ```
 
 Next: [Bootstrapping the Kubernetes Control Plane](08-bootstrapping-kubernetes-controllers.md)

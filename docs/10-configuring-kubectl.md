@@ -80,6 +80,4 @@ etcd-1               Healthy   {"health":"true","reason":""}
 etcd-0               Healthy   {"health":"true","reason":""} 
 ```
 
-
-
 Next: [Provisioning Pod Network Routes](11-pod-network-routes.md)

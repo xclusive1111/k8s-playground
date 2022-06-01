@@ -316,14 +316,14 @@ worker node. Access to the Kubelet API is required for retrieving metrics, logs,
 The commands in this section will affect the entire cluster and only need to be run once from one of the controller
 nodes.
 
-```
+```shell
 ssh master-0
 ```
 
 Create the `system:kube-apiserver-to-kubelet` [ClusterRole](https://kubernetes.io/docs/admin/authorization/rbac/#role-and-clusterrole)
 with permissions to access the Kubelet API and perform most common tasks associated with managing pods:
 
-```
+```shell
 cat <<EOF | kubectl apply --kubeconfig admin.kubeconfig -f -
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -352,7 +352,7 @@ by the `--kubelet-client-certificate` flag.
 
 Bind the `system:kube-apiserver-to-kubelet` ClusterRole to the `kubernetes` user:
 
-```
+```shell
 cat <<EOF | kubectl apply --kubeconfig admin.kubeconfig -f -
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

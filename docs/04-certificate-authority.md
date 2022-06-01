@@ -392,7 +392,7 @@ done
 
 Copy the appropriate certificates and private keys to each master instance:
 
-```shel
+```shell
 for instance in master-0 master-1 master-2; do
   scp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
     service-account-key.pem service-account.pem ${instance}:/root/
