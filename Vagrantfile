@@ -99,12 +99,24 @@ Vagrant.configure("2") do |config|
            apt-get install -y wget curl net-tools
         SHELL
 
-        # TODO
+        # Add DNS entires to the host file, and remove duplidated
+        # For example, with the following entries:
+        #
+        # 127.0.2.1 master-0 master-0
+        # 192.168.33.10 master-0 master-0.local
+        # 192.168.33.10 master-0
+        # 192.168.33.11 master-1
+        # 192.168.33.12 master-2
+        #
+        # We want to delete 2 entries:
+        # 127.0.2.1 master-0 master-0
+        # 192.168.33.10 master-0 master-0.local
+
         $setup_hosts = <<-SCRIPT
         echo -e \"$1 $2 $3 $4\" >> /etc/hosts
         sed -e '/^.*ubuntu-jammy.*/d' -i /etc/hosts # Remove this entry
         sed -e '/^.*127.0.2.1.*/d' -i /etc/hosts    # Remove unnecessary entry, e.g: '127.0.2.1 master-0 master-0'
-        sed -e '/^.*127.0.2.1.*/d' -i /etc/hosts    # Remove duplicated entry
+        sed -e \"/^$1 $2$/d\" -i /etc/hosts         # Remove duplicated entry
         SCRIPT
 
         node.vm.provision "setup hosts", type: "shell" do |s|
