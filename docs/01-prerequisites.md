@@ -4,9 +4,6 @@
 
 Preferably 16GB of RAM, 50GB of disk space.
 
-This tutorial leverages the [LXC](https://linuxcontainers.org/lxc/getting-started/) to streamline provisioning of the
-compute infrastructure required to bootstrap a Kubernetes cluster from the ground up.
-
 ## VirtualBox
 
 Download and Install [VirtualBox](https://www.virtualbox.org/wiki/Downloads) on any one of the supported platforms:
@@ -23,17 +20,11 @@ Vagrant provides an easier way to deploy multiple virtual machines on VirtualBox
 
 Download and Install [Vagrant](https://www.vagrantup.com/downloads) on your platform.
 
-- Windows
-- Debian
-- Centos
-- Linux
-- macOS
-
 ## Verification
 
-`vagrant -v`:
-
-> Output
+```shell
+vagrant -v
+```
 
 ```
 2.2.19

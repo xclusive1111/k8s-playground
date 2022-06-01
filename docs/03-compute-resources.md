@@ -20,7 +20,7 @@ Clone this repository and execute `vagrant up` at the root directory. This does 
 
 ## SSH to the nodes
 
-There are two ways to SSH into the nodes:
+There are three ways to SSH into the nodes:
 
 ### 1. SSH using Vagrant
 
@@ -57,7 +57,7 @@ Use the above IP addresses. Username and password based SSH is disabled by defau
   192.168.33.30 lb-0
   ```
 
-- Login into each node as a `root` user and add your SSH key
+- Login into each node as `root` user and add your SSH key
 
 - Create SSH profile for each node:
   
