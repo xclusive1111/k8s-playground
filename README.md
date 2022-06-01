@@ -1,12 +1,8 @@
 # Kubernetes The Hard Way on VirtualBox
 
-This tutorial walks you through setting up Kubernetes the hard way. This guide is not for people looking for a fully
-automated command to bring up a Kubernetes cluster. If that's you then check
-out [Google Kubernetes Engine](https://cloud.google.com/kubernetes-engine), or
-the [Getting Started Guides](https://kubernetes.io/docs/setup).
+This tutorial walks you through setting up Kubernetes the hard way. This guide is not for people looking for a fully automated command to bring up a Kubernetes cluster. If that's you then check out [Google Kubernetes Engine](https://cloud.google.com/kubernetes-engine), or the [Getting Started Guides](https://kubernetes.io/docs/setup).
 
-Kubernetes The Hard Way is optimized for learning, which means taking the long route to ensure you understand each task
-required to bootstrap a Kubernetes cluster.
+Kubernetes The Hard Way is optimized for learning, which means taking the long route to ensure you understand each task required to bootstrap a Kubernetes cluster.
 
 > The results of this tutorial should not be viewed as production ready, and may receive limited support from the community, but don't let that stop you from learning!
 
@@ -18,17 +14,15 @@ Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
 
 ## Target Audience
 
-The target audience for this tutorial is someone planning to support a production Kubernetes cluster and wants to
-understand how everything fits together.
+The target audience for this tutorial is someone planning to support a production Kubernetes cluster and wants to understand how everything fits together.
 
 ## Cluster Details
 
-Kubernetes The Hard Way guides you through bootstrapping a highly available Kubernetes cluster with end-to-end
-encryption between components and RBAC authentication.
+Kubernetes The Hard Way guides you through bootstrapping a highly available Kubernetes cluster with end-to-end encryption between components and RBAC authentication.
 
 * [kubernetes](https://github.com/kubernetes/kubernetes) v1.24.0
 * [containerd](https://github.com/containerd/containerd) v1.6.4
-* [coredns](https://github.com/coredns/coredns) v1.9.1
+* [coredns](https://github.com/coredns/coredns) v1.9.2
 * [cni](https://github.com/containernetworking/cni) v1.1.1
 * [etcd](https://github.com/etcd-io/etcd) v3.5.4
 
@@ -47,4 +41,3 @@ encryption between components and RBAC authentication.
 * [Provisioning Pod Network Routes](docs/11-pod-network-routes.md)
 * [Deploying the DNS Cluster Add-on](docs/12-dns-addon.md)
 * [Smoke Test](docs/13-smoke-test.md)
-* [Cleaning Up](docs/14-cleanup.md)

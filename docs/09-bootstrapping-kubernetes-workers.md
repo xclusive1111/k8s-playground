@@ -93,23 +93,32 @@ Install the worker binaries:
 Create the `bridge` network configuration file:
 
 ```shell
-{ 
-POD_CIDR=10.200.$(hostname| cut -d \- -f 2).0/24
-cat <<EOF | sudo tee /etc/cni/net.d/10-bridge.conf
 {
-    "cniVersion": "0.4.0",
-    "name": "bridge",
-    "type": "bridge",
-    "bridge": "cnio0",
-    "isGateway": true,
-    "ipMasq": true,
-    "ipam": {
-        "type": "host-local",
-        "ranges": [
-          [{"subnet": "${POD_CIDR}"}]
-        ],
-        "routes": [{"dst": "0.0.0.0/0"}]
-    }
+POD_CIDR=10.200.$(hostname| cut -d \- -f 2).0/24
+cat <<EOF | sudo tee 10-containerd-net.conflist
+{
+ "cniVersion": "1.0.0",
+ "name": "containerd-net",
+ "plugins": [
+   {
+     "type": "bridge",
+     "bridge": "cni0",
+     "isGateway": true,
+     "ipMasq": true,
+     "promiscMode": true,
+     "ipam": {
+       "type": "host-local",
+       "ranges": [
+         [{
+           "subnet": "${POD_CIDR}"
+         }]
+       ],
+       "routes": [
+         { "dst": "0.0.0.0/0" }
+       ]
+     }
+   }
+ ]
 }
 EOF
 }
@@ -120,7 +129,7 @@ Create the `loopback` network configuration file:
 ```shell
 cat <<EOF | sudo tee /etc/cni/net.d/99-loopback.conf
 {
-    "cniVersion": "0.4.0",
+    "cniVersion": "1.0.0",
     "name": "lo",
     "type": "loopback"
 }
@@ -179,7 +188,7 @@ EOF
 }
 ```
 
-Create the `kubelet-config.yaml` configuration file:
+Create the `kubelet-config.yaml` configuration file:t
 
 ```shell
 cat <<EOF | sudo tee /var/lib/kubelet/kubelet-config.yaml

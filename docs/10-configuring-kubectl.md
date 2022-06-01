@@ -80,13 +80,6 @@ etcd-1               Healthy   {"health":"true","reason":""}
 etcd-0               Healthy   {"health":"true","reason":""} 
 ```
 
-Run a sample pods
 
-```shell
-kubectl run box1 -it --rm --image busybox -- sh
-kubectl run box2 -it --rm --image busybox -- sh
-```
-
-Ensure the pod is running before proceeding into the next lab
 
 Next: [Provisioning Pod Network Routes](11-pod-network-routes.md)
