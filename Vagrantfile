@@ -3,30 +3,30 @@
 
 cluster = {
   "master" => [
-    { :ip => "192.168.33.10", :cpus => 2, :mem => 2048, :ssh => 3210 },
-    { :ip => "192.168.33.11", :cpus => 2, :mem => 2048, :ssh => 3211 },
-    { :ip => "192.168.33.12", :cpus => 2, :mem => 2048, :ssh => 3212 }
+    { :ip => "192.168.56.10", :cpus => 2, :mem => 2048, :ssh => 3210 },
+    { :ip => "192.168.56.11", :cpus => 2, :mem => 2048, :ssh => 3210 },
+    { :ip => "192.168.56.12", :cpus => 2, :mem => 2048, :ssh => 3210 }
   ],
   "worker" => [
-    { :ip => "192.168.33.20", :cpus => 1, :mem => 2048, :ssh => 3220 },
-    { :ip => "192.168.33.21", :cpus => 1, :mem => 2048, :ssh => 3221 },
-    { :ip => "192.168.33.22", :cpus => 1, :mem => 2048, :ssh => 3222 }
+    { :ip => "192.168.56.20", :cpus => 1, :mem => 2048, :ssh => 3220 },
+    { :ip => "192.168.56.21", :cpus => 1, :mem => 2048, :ssh => 3221 },
+    { :ip => "192.168.56.22", :cpus => 1, :mem => 2048, :ssh => 3221 },
   ],
   "lb" => [
-    { :ip => "192.168.33.30", :cpus => 1, :mem => 1024, :ssh => 3230 }
+    { :ip => "192.168.56.30", :cpus => 1, :mem => 1024, :ssh => 3230 }
   ]
 }
 
 hosts = "
-192.168.33.10 master-0
-192.168.33.11 master-1
-192.168.33.12 master-2
+192.168.56.10 master-0
+192.168.56.11 master-1
+192.168.56.12 master-2
 
-192.168.33.20 worker-0
-192.168.33.21 worker-1
-192.168.33.22 worker-2
+192.168.56.20 worker-0
+192.168.56.21 worker-1
+192.168.56.22 worker-2
 
-192.168.33.30 lb-0
+192.168.56.30 lb-0
 "
 
 
@@ -95,6 +95,7 @@ Vagrant.configure("2") do |config|
            echo "net.bridge.bridge-nf-call-iptables = 1" >> /etc/sysctl.conf
            echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
            modprobe br_netfilter
+           sysctl --system
            apt-get update
            apt-get install -y wget curl net-tools
         SHELL
@@ -103,14 +104,14 @@ Vagrant.configure("2") do |config|
         # For example, with the following entries:
         #
         # 127.0.2.1 master-0 master-0
-        # 192.168.33.10 master-0 master-0.local
-        # 192.168.33.10 master-0
-        # 192.168.33.11 master-1
-        # 192.168.33.12 master-2
+        # 192.168.56.10 master-0 master-0.local
+        # 192.168.56.10 master-0
+        # 192.168.56.11 master-1
+        # 192.168.56.12 master-2
         #
         # We want to delete 2 entries:
         # 127.0.2.1 master-0 master-0
-        # 192.168.33.10 master-0 master-0.local
+        # 192.168.56.10 master-0 master-0.local
 
         $setup_hosts = <<-SCRIPT
         echo -e \"$1 $2 $3 $4\" >> /etc/hosts
