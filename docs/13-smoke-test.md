@@ -19,7 +19,7 @@ secret/kubernetes-the-hard-way created
 
 Print a hexdump of the `kubernetes-the-hard-way` secret stored in etcd:
 
-```
+```shell
 ssh master-0 "ETCDCTL_API=3 etcdctl get \
   --endpoints=https://127.0.0.1:2379 \
   --cacert=/etc/etcd/ca.pem \
@@ -93,7 +93,7 @@ POD_NAME=$(kubectl get pods -l app=nginx -o jsonpath="{.items[0].metadata.name}"
 
 Forward port `8080` on your local machine to port `80` of the `nginx` pod:
 
-```
+```shell
 kubectl port-forward $POD_NAME 8080:80
 ```
 
@@ -104,7 +104,7 @@ Forwarding from [::1]:8080 -> 80
 
 In a new terminal make an HTTP request using the forwarding address:
 
-```
+```shell
 curl --head http://127.0.0.1:8080
 ```
 
@@ -183,7 +183,7 @@ Retrieve the external IP address of a worker instance:
 HOST_IP=$(kubectl get pods $POD_NAME -o wide --output=jsonpath='{.status.hostIP}')
 ```
 
-Make an HTTP request using the host IP address and the `nginx` node port:
+Referense:Make an HTTP request using the host IP address and the `nginx` node port:
 
 ```shell
 curl -I http://${HOST_IP}:${NODE_PORT}
