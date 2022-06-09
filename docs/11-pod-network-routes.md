@@ -41,8 +41,6 @@ tigera-operator    tigera-operator-5fb55776df-8xlgw           1/1     Running   
 
 > It can take up to 10 minutes to get all pods up and running.
 
-
-
 The `calico-apiserver` deployment was configured with clusterIP by default that is unreachable by the `kube-apiserver`. Update to use `hostNetwork` will bind port directly to the `worker` node: 
 
 ```shell
@@ -59,8 +57,6 @@ kubectl get apiservices | grep v3.projectcalico.org
 NAME                   SERVICE                       AVAILABLE   AGE
 v3.projectcalico.org   calico-apiserver/calico-api   True        6d9h
 ```
-
-
 
 ## Verify pods communication
 

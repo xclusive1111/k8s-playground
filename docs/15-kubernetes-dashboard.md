@@ -2,7 +2,7 @@
 
 In this lab, we will install the kubernetes dashboard that provides web-based UI for Kubernetes cluster. It allows users to manage applications running in the cluster and troubleshoot them, as well as manage the cluster itself.
 
-![](/home/sondv/.config/marktext/images/2022-06-09-11-41-31-image.png)
+![](https://i.imgur.com/EEBZtJA.png)
 
 The kubernetes dashboards consists of 3 components: `metrics-server`, `metrics-scraper` and `dashboard`
 
