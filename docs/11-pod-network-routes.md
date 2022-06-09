@@ -8,10 +8,12 @@ In this lab you will create a route for each worker node that maps the node's Po
 
 ## Deploy Calico Network
 
-Run the following only once on the `master` node:
+Run the following only once on the host that used to provision computing instances:
 
 ```shell
-kubectl --kubeconfig admin.kubeconfig create -f https://projectcalico.docs.tigera.io/manifests/tigera-operator.yaml
+kubectl create -f https://projectcalico.docs.tigera.io/manifests/tigera-operator.yaml
+curl https://projectcalico.docs.tigera.io/manifests/custom-resources.yaml -O
+kubectl create -f custom-resources.yaml
 ```
 
 > Calico will automatically detect the CIDR based on the running configuration
@@ -39,6 +41,27 @@ tigera-operator    tigera-operator-5fb55776df-8xlgw           1/1     Running   
 
 > It can take up to 10 minutes to get all pods up and running.
 
+
+
+The `calico-apiserver` deployment was configured with clusterIP by default that is unreachable by the `kube-apiserver`. Update to use `hostNetwork` will bind port directly to the `worker` node: 
+
+```shell
+kubectl patch deployments calico-apiserver -n calico-apiserver -p '{"spec": {"template": {"spec": {"hostNetwork": true, "dnsPolicy": "ClusterFirstWithHostNet"}}}}'
+```
+
+Make sure the calico apiservice availibility is `True`:
+
+```shell
+kubectl get apiservices | grep v3.projectcalico.org
+```
+
+```
+NAME                   SERVICE                       AVAILABLE   AGE
+v3.projectcalico.org   calico-apiserver/calico-api   True        6d9h
+```
+
+
+
 ## Verify pods communication
 
 Run two pods:
@@ -63,10 +86,6 @@ box2   1/1     Running   0          70s   192.168.226.66    worker-1   <none>   
 > 
 > You can use `kubectl get blockaffinities`to show the maping between node and CIDR that Calico is using.
 
-
-
 In the shell of each box, ensure that they can `ping` each other.
-
-
 
 Next: [Deploying the DNS Cluster Add-on](12-dns-addon.md)

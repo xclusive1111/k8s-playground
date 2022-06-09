@@ -402,7 +402,6 @@ spec:
             drop:
             - ALL
           runAsUser: 101
-      dnsPolicy: ClusterFirst
       nodeSelector:
         kubernetes.io/os: linux
       serviceAccountName: ingress-nginx

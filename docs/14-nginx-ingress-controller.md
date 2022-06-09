@@ -216,3 +216,5 @@ Hello, world!
 Version: 2.0.0
 Hostname: web2-574fc47679-gnqlf
 ```
+
+Next: [Kubernetes Dashboard](15-kubernetes-dashboard.md)

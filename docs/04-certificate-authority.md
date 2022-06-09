@@ -137,12 +137,13 @@ cat > ${instance}-csr.json <<EOF
 EOF
 
 EXTERNAL_IP=$(cat /etc/hosts | grep lb-0 | awk '{print $1}')
+INTERNAL_IP=$(cat /etc/hosts | grep ${instance} | awk '{print $1}')
 
 cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=${instance},${EXTERNAL_IP} \
+  -hostname=${instance},${},${EXTERNAL_IP} \
   -profile=kubernetes \
   ${instance}-csr.json | cfssljson -bare ${instance}
 done
