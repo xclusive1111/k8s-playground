@@ -11,9 +11,7 @@ In this lab you will create a route for each worker node that maps the node's Po
 Run the following only once on the host that used to provision computing instances:
 
 ```shell
-kubectl create -f https://projectcalico.docs.tigera.io/manifests/tigera-operator.yaml
-curl https://projectcalico.docs.tigera.io/manifests/custom-resources.yaml -O
-kubectl create -f custom-resources.yaml
+kubectl create -f https://projectcalico.docs.tigera.io/manifests/calico.yaml
 ```
 
 > Calico will automatically detect the CIDR based on the running configuration
@@ -21,42 +19,23 @@ kubectl create -f custom-resources.yaml
 Verify deployment:
 
 ```shell
-kubectl get pods --all-namespaces -o wide
+kubectl get pods -n kube-system -o wide
 ```
 
 Result:
 
 ```
-NAMESPACE          NAME                                       READY   STATUS    RESTARTS   AGE   IP                NODE       NOMINATED NODE   READINESS GATES
-calico-apiserver   calico-apiserver-6458f949b-59xbv           1/1     Running   0          22m   192.168.43.1      worker-0   <none>           <none>
-calico-apiserver   calico-apiserver-6458f949b-pxczx           1/1     Running   0          22m   192.168.133.193   worker-2   <none>           <none>
-calico-system      calico-kube-controllers-69cc7b7f48-gspww   1/1     Running   0          29m   10.200.1.4        worker-1   <none>           <none>
-calico-system      calico-node-2524g                          1/1     Running   0          29m   192.168.33.22     worker-2   <none>           <none>
-calico-system      calico-node-8nzd7                          1/1     Running   0          29m   192.168.33.21     worker-1   <none>           <none>
-calico-system      calico-node-hml7l                          1/1     Running   0          29m   192.168.33.20     worker-0   <none>           <none>
-calico-system      calico-typha-6ff7d59b7f-jcgmb              1/1     Running   0          29m   192.168.33.22     worker-2   <none>           <none>
-calico-system      calico-typha-6ff7d59b7f-wrn9j              1/1     Running   0          29m   192.168.33.21     worker-1   <none>           <none>
-tigera-operator    tigera-operator-5fb55776df-8xlgw           1/1     Running   0          30m   192.168.33.20     worker-0   <none>           <none>
-```
-
-> It can take up to 10 minutes to get all pods up and running.
-
-The `calico-apiserver` deployment was configured with clusterIP by default that is unreachable by the `kube-apiserver`. Update to use `hostNetwork` will bind port directly to the `worker` node: 
-
-```shell
-kubectl patch deployments calico-apiserver -n calico-apiserver -p '{"spec": {"template": {"spec": {"hostNetwork": true, "dnsPolicy": "ClusterFirstWithHostNet"}}}}'
-```
-
-Make sure the calico apiservice availibility is `True`:
-
-```shell
-kubectl get apiservices | grep v3.projectcalico.org
-```
+NAME                                         READY   STATUS    RESTARTS      AGE
+calico-kube-controllers-56cdb7c587-qmzpf     1/1     Running   1 (22m ago)   32m
+calico-node-hmdh5                            1/1     Running   1 (22m ago)   32m
+calico-node-vzrv9                            1/1     Running   1 (22m ago)   32m
+calico-node-xbtms                            1/1     Running   1 (22m ago)   32m
+coredns-6cd56d4df4-6h4rw                     1/1     Running   7 (22m ago)   8d
+coredns-6cd56d4df4-lm4j4                     1/1     Running   7 (22m ago)   8d
 
 ```
-NAME                   SERVICE                       AVAILABLE   AGE
-v3.projectcalico.org   calico-apiserver/calico-api   True        6d9h
-```
+
+
 
 ## Verify pods communication
 
