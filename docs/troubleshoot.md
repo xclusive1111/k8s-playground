@@ -22,11 +22,14 @@
   Error from server (InternalError): error when creating "deployments/web1.yaml": Internal error occurred: failed calling webhook "validate.nginx.ingress.kubernetes.io": failed to call webhook: Post "https://ingress-nginx-controller-admission.ingress-nginx.svc:443/networking/v1/ingresses?timeout=10s": context deadline exceeded
   ```
   
-  Delete `ValidatingWebhookConfiguration`
+  Try to turn on an admission controller: [Using Admission Controllers | Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#how-do-i-turn-on-an-admission-controller) or delete `ValidatingWebhookConfiguration`
   
   ```shell
   kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
   ```
+
+
+
 * The `calico-apiserver` deployment needs to run with `hostNetwork: true` and `dnsPolicy: ClusterFirstWithHostNet`, otherwise the `kube-apiserver` will fail to validate apiservice `v3.projectcalico.org`
 
 * Kubernetes dashboard:
