@@ -233,6 +233,7 @@ ExecStart=/usr/local/bin/kubelet \\
   --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock \\
   --kubeconfig=/var/lib/kubelet/kubeconfig \\
   --register-node=true \\
+  --node-labels=node-role.kubernetes.io/worker=true \\
   --v=2
 Restart=on-failure
 RestartSec=5
