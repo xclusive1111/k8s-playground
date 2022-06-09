@@ -54,6 +54,6 @@ Kubernetes The Hard Way guides you through bootstrapping a highly available Kube
 
 * [Smoke Test](docs/13-smoke-test.md)
 
-* [Extra - Nginx InReferense:gress Controller](docs/14-nginx-ingress-controller.md)
+* [Extra - Nginx Ingress Controller](docs/14-nginx-ingress-controller.md)
 
 * [Extra - Kubernetes Dashboard](docs/15-kubernetes-dashboard.md)
