@@ -47,6 +47,16 @@ Kustomize Version: v4.5.4
 Server Version: version.Info{Major:"1", Minor:"24", GitVersion:"v1.24.0", GitCommit:"4ce5a8954017644c5420bae81d72b09b735c21f0", GitTreeState:"clean", BuildDate:"2022-05-03T13:38:19Z", GoVersion:"go1.18.1", Compiler:"gc", Platform:"linux/amd64"}
 ```
 
+Add `worker` label to nodes:
+
+```shell
+for instance in worker-0 worker-1 worker-2; do
+  kubectl label node ${instance} node-role.kubernetes.io/worker=true
+done
+```
+
+
+
 List the nodes in the remote Kubernetes cluster:
 
 ```shell
@@ -57,9 +67,9 @@ Result:
 
 ```
 NAME       STATUS   ROLES    AGE   VERSION
-worker-0   Ready    <none>   17m   v1.24.0
-worker-1   Ready    <none>   18m   v1.24.0
-worker-2   Ready    <none>   17m   v1.24.0
+worker-0   Ready    worker   17m   v1.24.0
+worker-1   Ready    worker   18m   v1.24.0
+worker-2   Ready    worker   17m   v1.24.0
 ```
 
 List component status:
