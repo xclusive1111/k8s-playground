@@ -55,8 +55,6 @@ for instance in worker-0 worker-1 worker-2; do
 done
 ```
 
-
-
 List the nodes in the remote Kubernetes cluster:
 
 ```shell
