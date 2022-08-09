@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: web2
+  name: web3
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
-      run: web2
+      run: web3
   template:
     metadata:
       labels:
-        run: web2
+        run: web3
     spec:
       nodeSelector:
         pool: app
@@ -45,10 +45,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: web2
+  name: web3
 spec:
   selector:
-    run: web2
+    run: web3
   ports:
   - port: 8080
     targetPort: 8080
@@ -57,16 +57,18 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: web2
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  name: web3
 spec:
   ingressClassName: nginx
   rules:
   - http:
       paths:
-      - path: /v2
+      - path: /v3(/|$)(.*)
         pathType: Prefix
         backend:
           service:
-            name: web2
+            name: web3
             port:
               number: 8080

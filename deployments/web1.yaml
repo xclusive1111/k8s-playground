@@ -58,15 +58,14 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  annotations:
-    kubernetes.io/ingress.class: "nginx"
   name: web1
 spec:
+  ingressClassName: nginx
   rules:
   - http:
       paths:
       - path: /v1
-        pathType: ImplementationSpecific
+        pathType: Prefix
         backend:
           service:
             name: web1
