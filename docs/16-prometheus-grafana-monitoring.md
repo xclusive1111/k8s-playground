@@ -2,7 +2,7 @@
 
 In this lab, we will install Prometheus Operator that helps with monitoring cluster components and resources.
 
-![](/home/sondv/.config/marktext/images/2022-08-15-11-05-38-image.png)
+![](https://i.imgur.com/OKqwOlC.png)
 
 ### Deploy kube-prometheus
 
@@ -78,6 +78,8 @@ kubectl apply -f deployments/grafana.yaml
 
 Access the Grafana dashboard at [http://lb-0/grafana]() and add some metrics:
 
-![](/home/sondv/.config/marktext/images/2022-08-15-10-53-26-image.png)
+![](https://i.imgur.com/UuLvJgK.png)
+
+
 
 Reference link: [Quick Start - Prometheus Operator (prometheus-operator.dev)](https://prometheus-operator.dev/docs/prologue/quick-start/)
