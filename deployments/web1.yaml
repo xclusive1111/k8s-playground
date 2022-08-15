@@ -16,7 +16,7 @@ spec:
         pool: app
       containers:
       - image: us-docker.pkg.dev/google-samples/containers/gke/hello-app:1.0
-        name: web
+        name: web1
         ports:
         - containerPort: 8080
           protocol: TCP

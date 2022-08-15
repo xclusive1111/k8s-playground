@@ -57,3 +57,5 @@ Kubernetes The Hard Way guides you through bootstrapping a highly available Kube
 * [Extra - Nginx Ingress Controller](docs/14-nginx-ingress-controller.md)
 
 * [Extra - Kubernetes Dashboard](docs/15-kubernetes-dashboard.md)
+
+* [Extra - Prometheus/Grafana Monitoring](docs/16-prometheus-grafana-monitoring.md)
