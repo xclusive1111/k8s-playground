@@ -32,10 +32,7 @@ calico-node-vzrv9                            1/1     Running   1 (22m ago)   32m
 calico-node-xbtms                            1/1     Running   1 (22m ago)   32m
 coredns-6cd56d4df4-6h4rw                     1/1     Running   7 (22m ago)   8d
 coredns-6cd56d4df4-lm4j4                     1/1     Running   7 (22m ago)   8d
-
 ```
-
-
 
 ## Verify pods communication
 

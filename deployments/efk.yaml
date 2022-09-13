@@ -1,0 +1,323 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: efk-config
+data:
+  fluentd.conf: |
+    <source>
+      @type http
+      @id http_input
+      port 8888
+    </source>
+    <match api.**>
+      @type elasticsearch
+      host elasticsearch
+      port 9200
+      user elastic
+      password *********
+      scheme https
+      ssl_verify false
+      logstash_format true
+      logstash_prefix fluentd
+      <buffer>
+        flush_interval 10s
+      </buffer>
+    </match>
+  ELASTICSEARCH_PASSWORD: *********
+  KIBANA_SYSTEM_PASSWORD: *********
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  labels:
+    app: elasticsearch
+spec:
+  ports:
+  - port: 9200
+    targetPort: 9200
+  clusterIP: None
+  selector:
+    app: elasticsearch
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: elasticsearch
+  serviceName: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: pool-efk
+      tolerations:
+      - key: "pool"
+        value: "pool-efk"
+        effect: "NoSchedule"
+      containers:
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.2.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9200
+          name: rest
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "2Gi"
+          requests:
+            cpu: "200m"
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: elasticsearch-data
+        - mountPath: /usr/share/elasticsearch/config/certs
+          name: elasticsearch-certs
+        env:
+        - name: cluster.name
+          value: "k8s-logs"
+        - name: discovery.type
+          value: "single-node"
+        - name: bootstrap.memory_lock
+          value: "true"
+        - name: xpack.security.enabled
+          value: "true"
+        - name: xpack.security.http.ssl.enabled
+          value: "true"
+        - name: xpack.security.http.ssl.key
+          value: "certs/elasticsearch/elasticsearch.key"
+        - name: xpack.security.http.ssl.certificate
+          value: "certs/elasticsearch/elasticsearch.crt"
+        - name: xpack.security.http.ssl.certificate_authorities
+          value: "certs/ca/ca.crt"
+        - name: xpack.security.http.ssl.verification_mode
+          value: "certificate"
+        - name: xpack.license.self_generated.type
+          value: "basic"
+        - name: ES_JAVA_OPTS
+          value: "-Xms512m -Xmx2G"
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - chown -R 1000:1000 /usr/share/elasticsearch/data
+        - chown -R root:root config/certs
+        - find . -type d -exec chmod 750 \{\} \;
+        - find . -type f -exec chmod 640 \{\} \;
+        image: busybox
+        imagePullPolicy: Always
+        name: fix-permissions
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: elasticsearch-data
+        - mountPath: /usr/share/elasticsearch/config/certs
+          name: elasticsearch-certs
+      - command:
+        - sysctl
+        - -w
+        - vm.max_map_count=262144
+        image: busybox
+        imagePullPolicy: Always
+        name: increase-vm-max-map
+        securityContext:
+          privileged: true
+      - command:
+        - sh
+        - -c
+        - ulimit -n 65536
+        image: busybox
+        imagePullPolicy: Always
+        name: increase-fd-ulimit
+        securityContext:
+          privileged: true
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: elasticsearch-certs
+        secret:
+          secretName: "efk-tls"
+          items:
+          - key: "ca.crt"
+            path: "ca/ca.crt"
+          - key: "ca.key"
+            path: "ca/ca.key"
+          - key: "elasticsearch.crt"
+            path: "elasticsearch/elasticsearch.crt"
+          - key: "elasticsearch.key"
+            path: "elasticsearch/elasticsearch.key"
+  volumeClaimTemplates:
+  - metadata:
+      name: elasticsearch-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 50Gi
+      storageClassName: ssd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fluentd
+  labels:
+    app: fluentd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fluentd
+  template:
+    metadata:
+      labels:
+        app: fluentd
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: pool-efk
+      tolerations:
+      - key: "pool"
+        value: "pool-efk"
+        effect: "NoSchedule"
+      containers:
+      - name: fluentd
+        image: bitnami/fluentd:1.14.6
+        resources:
+          limits:
+            memory: "200Mi"
+            cpu: "500m"
+          requests:
+            cpu: "200m"
+            memory: "200Mi"
+        ports:
+        - name: http-input
+          containerPort: 8888
+        volumeMounts:
+        - name: fluentd-config
+          mountPath: "/opt/bitnami/fluentd/conf"
+      volumes:
+      - name: fluentd-config
+        configMap:
+          name: "efk-config"
+          items:
+          - key: "fluentd.conf"
+            path: "fluentd.conf"
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fluentd
+spec:
+  ports:
+  - port: 80
+    targetPort: 8888
+  selector:
+    app: fluentd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  labels:
+    app: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: pool-efk
+      tolerations:
+      - key: "pool"
+        value: "pool-efk"
+        effect: "NoSchedule"
+      containers:
+      - name: kibana
+        image: docker.elastic.co/kibana/kibana:8.2.0
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+          requests:
+            cpu: "200m"
+        env:
+          - name: ELASTICSEARCH_HOSTS
+            value: https://elasticsearch:9200
+          - name: ELASTICSEARCH_USERNAME
+            value: kibana_system
+          # Follow the bellow instructions to set kibana_system password
+          # kubectl exec -it elasticsearch-0 /bin/bash
+          # bin/elasticsearch-reset-password -u kibana_system -i <my_password>
+          # Update configmap 'efk-config' to add a new entry 'KIBANA_SYSTEM_PASSWORD'
+          # with a newly generated password above
+          - name: ELASTICSEARCH_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: efk-config
+                key: KIBANA_SYSTEM_PASSWORD
+          - name: ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES
+            value: "/tmp/ca.crt"
+          # Uncomment to serve kibana in a different context path
+          # - name: SERVER_BASEPATH
+          #   value: "/kibana"
+        ports:
+        - containerPort: 5601
+        volumeMounts:
+        - mountPath: /tmp
+          name: elasticsearch-certs
+      volumes:
+      - name: elasticsearch-certs
+        secret:
+          secretName: "efk-tls"
+          items:
+          - key: "ca.crt"
+            path: "ca.crt"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+spec:
+  ports:
+  - port: 5601
+    targetPort: 5601
+  selector:
+    app: kibana
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kibana
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - kibana.livemore.app
+    secretName: cf-tls-livemore
+  rules:
+  - host: kibana.livemore.app
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kibana
+            port:
+              number: 5601
+
+
