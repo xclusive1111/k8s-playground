@@ -279,6 +279,36 @@ spec:
         volumeMounts:
         - mountPath: /tmp
           name: elasticsearch-certs
+      # Container to cleanup elasticsearch index every 24 hours
+      # Only keep logs from the last 30 days
+      - name: index-cleanup
+        image: yauritux/busybox-curl:latest
+        command:
+        - sh
+        - -c
+        - |
+          while :; do
+            echo ===========================;
+            index=fluentd-$(date -d@"$(( `date +%s`-2592000))" +%Y.%m.%d);
+            echo Removing $index;
+            curl -v -u ${ELASTICSEARCH_USERNAME}:${ELASTICSEARCH_PASSWORD} -X DELETE --cacert /tmp/ca.crt https://elasticsearch:9200/${index}?pretty;
+            sleep 86400;
+          done;
+        env:
+          - name: ELASTICSEARCH_USERNAME
+            value: elastic
+          - name: ELASTICSEARCH_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: efk-config
+                key: ELASTICSEARCH_PASSWORD
+          - name: ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES
+            value: "/tmp/ca.crt"
+        ports:
+        - containerPort: 5601
+        volumeMounts:
+        - mountPath: /tmp
+          name: elasticsearch-certs
       volumes:
       - name: elasticsearch-certs
         secret:
