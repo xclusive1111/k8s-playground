@@ -103,6 +103,11 @@ spec:
           value: "basic"
         - name: ES_JAVA_OPTS
           value: "-Xms512m -Xmx2G"
+        - name: ELASTIC_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: efk-config
+              key: ELASTICSEARCH_PASSWORD
       initContainers:
       - command:
         - sh

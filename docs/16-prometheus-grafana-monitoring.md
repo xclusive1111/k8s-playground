@@ -80,6 +80,4 @@ Access the Grafana dashboard at [http://lb-0/grafana]() and add some metrics:
 
 ![](https://i.imgur.com/UuLvJgK.png)
 
-
-
 Reference link: [Quick Start - Prometheus Operator (prometheus-operator.dev)](https://prometheus-operator.dev/docs/prologue/quick-start/)

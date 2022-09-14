@@ -11,7 +11,7 @@ In this lab you will create a route for each worker node that maps the node's Po
 Run the following only once on the host that used to provision computing instances:
 
 ```shell
-kubectl create -f https://projectcalico.docs.tigera.io/manifests/calico.yaml
+kubectl create -f deployments/calico.yaml
 ```
 
 > Calico will automatically detect the CIDR based on the running configuration
