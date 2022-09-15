@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: sonarqube-pv
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 20Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarqube-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sonarqube
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: sonarqube
+  serviceName: sonarqube
+  template:
+    metadata:
+      labels:
+        app: sonarqube
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: worker-1
+        pool: app
+      containers:
+      - name: sonarqube
+        image: sonarqube:9.6.1-community
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9000
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "2Gi"
+          requests:
+            cpu: "200m"
+        volumeMounts:
+        - name: sonarqube-storage
+          mountPath: /opt/sonarqube/data
+          subPath: data
+        - name: sonarqube-storage
+          mountPath: /opt/sonarqube/extensions/plugins
+          subPath: plugins
+        env:
+        - name: SONAR_WEB_CONTEXT
+          value: "/sonarqube"
+        - name: SONAR_ES_BOOTSTRAP_CHECKS_DISABLE
+          value: "true"
+        - name: ES_JAVA_OPTS
+          value: "-Xms512m -Xmx2G"
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - |
+          rm -f /opt/sonarqube/extensions/plugins/*.jar &&
+          wget -c https://github.com/insideapp-oss/sonar-flutter/releases/download/0.4.0/sonar-flutter-plugin-0.4.0.jar -P /opt/sonarqube/extensions/plugins
+        image: busybox
+        imagePullPolicy: Always
+        name: setup
+        volumeMounts:
+        - name: sonarqube-storage
+          mountPath: /opt/sonarqube/extensions/plugins
+          subPath: plugins
+      - command:
+        - sysctl
+        - -w
+        - vm.max_map_count=262144
+        image: busybox
+        imagePullPolicy: Always
+        name: increase-vm-max-map
+        securityContext:
+          privileged: true
+      - command:
+        - sh
+        - -c
+        - ulimit -n 65536
+        image: busybox
+        imagePullPolicy: Always
+        name: increase-fd-ulimit
+        securityContext:
+          privileged: true
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: sonarqube-storage
+          persistentVolumeClaim:
+            claimName: sonarqube-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarqube
+  labels:
+    app: sonarqube
+spec:
+  ports:
+  - port: 9000
+    targetPort: 9000
+  selector:
+    app: sonarqube
