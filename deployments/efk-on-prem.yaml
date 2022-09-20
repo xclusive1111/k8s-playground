@@ -1,0 +1,444 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: efk-pv
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 20Gi
+  volumeMode: Filesystem
+  persistentVolumeReclaimPolicy: Delete
+  accessModes:
+  - ReadWriteOnce
+  hostPath:
+    path: "/mnt/efk"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: efk-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: efk-config
+data:
+  fluentd.conf: |
+    <source>
+      @type http
+      @id http_input
+      port 8888
+    </source>
+    <match api.**>
+      @type elasticsearch
+      host elasticsearch
+      port 9200
+      user elastic
+      password changeme
+      scheme https
+      ssl_verify false
+      logstash_format true
+      logstash_prefix fluentd
+      <buffer>
+        flush_interval 10s
+      </buffer>
+    </match>
+  ELASTICSEARCH_PASSWORD: changeme
+  KIBANA_SYSTEM_PASSWORD: changeme
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  labels:
+    app: elasticsearch
+spec:
+  ports:
+  - port: 9200
+    targetPort: 9200
+  clusterIP: None
+  selector:
+    app: elasticsearch
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: elasticsearch
+  serviceName: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: worker-1
+      tolerations:
+      - key: "pool"
+        value: "pool-efk"
+        effect: "NoSchedule"
+      # securityContext:
+      #   runAsUser: 1000
+      #   fsGroup: 1000
+      containers:
+      - name: setup
+        image: yauritux/busybox-curl:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - |
+          echo "Waiting for Elasticsearch availability";
+          until curl --cacert /usr/share/elasticsearch/config/certs/ca/ca.crt https://elasticsearch:9200 | grep -q "missing authentication credentials"; do sleep 5; done;
+          echo "Setting kibana_system password";
+          until curl -X POST --cacert /usr/share/elasticsearch/config/certs/ca/ca.crt -u elastic:${ELASTIC_PASSWORD} -H "Content-Type: application/json" https://elasticsearch:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 5; done;
+          echo "All done!";
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/config/certs
+          name: efk-storage
+          subPath: certs
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.2.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9200
+          name: rest
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "2Gi"
+          requests:
+            cpu: "200m"
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: efk-storage
+          subPath: data
+        - mountPath: /usr/share/elasticsearch/config/certs
+          name: efk-storage
+          subPath: certs
+        env:
+        - name: cluster.name
+          value: "k8s-logs"
+        - name: discovery.type
+          value: "single-node"
+        - name: bootstrap.memory_lock
+          value: "true"
+        - name: xpack.security.enabled
+          value: "true"
+        - name: xpack.security.http.ssl.enabled
+          value: "true"
+        - name: xpack.security.http.ssl.key
+          value: "certs/elasticsearch/elasticsearch.key"
+        - name: xpack.security.http.ssl.certificate
+          value: "certs/elasticsearch/elasticsearch.crt"
+        - name: xpack.security.http.ssl.certificate_authorities
+          value: "certs/ca/ca.crt"
+        - name: xpack.security.http.ssl.verification_mode
+          value: "certificate"
+        - name: xpack.license.self_generated.type
+          value: "basic"
+        - name: ES_JAVA_OPTS
+          value: "-Xms512m -Xmx2G"
+        - name: ELASTIC_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: efk-config
+              key: ELASTICSEARCH_PASSWORD
+      initContainers:
+      - command:
+        # Need any container with a root user to change permission of mounted volumes
+        - sh
+        - -c
+        - |
+          chown -R 1000:1000 /usr/share/elasticsearch/data;
+          chown -R 1000:1000 /usr/share/elasticsearch/config/certs;
+        image: busybox
+        imagePullPolicy: IfNotPresent
+        name: fix-permissions
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: efk-storage
+          subPath: data
+        - mountPath: /usr/share/elasticsearch/config/certs
+          name: efk-storage
+          subPath: certs
+      - command:
+        - sh
+        - -c
+        - |
+          if [ ! -f config/certs/ca.zip ]; then
+            echo "Creating CA";
+            bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
+            unzip config/certs/ca.zip -d config/certs;
+          fi;
+          if [ ! -f config/certs/certs.zip ]; then
+            echo "Creating certs";
+            echo -ne \
+            "instances:\n"\
+            "  - name: elasticsearch\n"\
+            "    dns:\n"\
+            "      - elasticsearch\n"\
+            "      - localhost\n"\
+            "    ip:\n"\
+            "      - 127.0.0.1\n"\
+            > config/certs/instances.yml;
+            bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
+            unzip config/certs/certs.zip -d config/certs;
+          fi;
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.2.0
+        imagePullPolicy: IfNotPresent
+        name: generate-certs
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: efk-storage
+          subPath: data
+        - mountPath: /usr/share/elasticsearch/config/certs
+          name: efk-storage
+          subPath: certs
+        securityContext:
+          privileged: true
+      - command:
+        - sysctl
+        - -w
+        - vm.max_map_count=262144
+        image: busybox
+        imagePullPolicy: IfNotPresent
+        name: increase-vm-max-map
+        securityContext:
+          privileged: true
+      - command:
+        - sh
+        - -c
+        - ulimit -n 65536
+        image: busybox
+        imagePullPolicy: IfNotPresent
+        name: increase-fd-ulimit
+        securityContext:
+          privileged: true
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: efk-storage
+          persistentVolumeClaim:
+            claimName: efk-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fluentd
+  labels:
+    app: fluentd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fluentd
+  template:
+    metadata:
+      labels:
+        app: fluentd
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: worker-1
+      tolerations:
+      - key: "pool"
+        value: "pool-efk"
+        effect: "NoSchedule"
+      containers:
+      - name: fluentd
+        image: bitnami/fluentd:1.14.6
+        resources:
+          limits:
+            memory: "200Mi"
+            cpu: "500m"
+          requests:
+            cpu: "200m"
+            memory: "200Mi"
+        ports:
+        - name: http-input
+          containerPort: 8888
+        volumeMounts:
+        - name: fluentd-config
+          mountPath: "/opt/bitnami/fluentd/conf"
+      volumes:
+      - name: fluentd-config
+        configMap:
+          name: "efk-config"
+          items:
+          - key: "fluentd.conf"
+            path: "fluentd.conf"
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fluentd
+spec:
+  ports:
+  - port: 80
+    targetPort: 8888
+  selector:
+    app: fluentd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  labels:
+    app: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: worker-1
+      tolerations:
+      - key: "pool"
+        value: "pool-efk"
+        effect: "NoSchedule"
+      initContainers:
+      - name: waiting-availability
+        image: yauritux/busybox-curl:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - |
+          echo "Waiting for Elasticsearch availability";
+          until
+            echo "Checking kibana_system password...";
+            resp=$(curl -u kibana_system:${KIBANA_PASSWORD} --cacert /tmp/ca/ca.crt https://elasticsearch:9200 -s -w "%{http_code}");
+            echo ${resp: -3} | grep -q 200;
+            do sleep 5;
+          done;
+          echo "All done!";
+        env:
+          - name: KIBANA_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: efk-config
+                key: KIBANA_SYSTEM_PASSWORD
+        volumeMounts:
+        - mountPath: /tmp
+          subPath: certs
+          name: efk-storage
+      containers:
+      - name: kibana
+        image: docker.elastic.co/kibana/kibana:8.2.0
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+          requests:
+            cpu: "200m"
+        env:
+          - name: ELASTICSEARCH_HOSTS
+            value: https://elasticsearch:9200
+          - name: ELASTICSEARCH_USERNAME
+            value: kibana_system
+          # Follow the bellow instructions to set kibana_system password
+          # kubectl exec -it elasticsearch-0 /bin/bash
+          # bin/elasticsearch-reset-password -u kibana_system -i <my_password>
+          # Update configmap 'efk-config' to add a new entry 'KIBANA_SYSTEM_PASSWORD'
+          # with a newly generated password above
+          - name: ELASTICSEARCH_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: efk-config
+                key: KIBANA_SYSTEM_PASSWORD
+          - name: ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES
+            value: "/tmp/ca/ca.crt"
+          # Uncomment to serve kibana in a different context path
+          # - name: SERVER_BASEPATH
+          #   value: "/kibana"
+        ports:
+        - containerPort: 5601
+        volumeMounts:
+        - mountPath: /tmp
+          subPath: certs
+          name: efk-storage
+      # Container to cleanup elasticsearch index every 24 hours
+      # Only keep logs from the last 30 days
+      - name: index-cleanup
+        image: yauritux/busybox-curl:latest
+        command:
+        - sh
+        - -c
+        - |
+          while :; do
+            echo ===========================;
+            index=fluentd-$(date -d@"$(( `date +%s`-2592000))" +%Y.%m.%d);
+            echo Removing $index;
+            curl -v -u ${ELASTICSEARCH_USERNAME}:${ELASTICSEARCH_PASSWORD} -X DELETE --cacert /tmp/ca.crt https://elasticsearch:9200/${index}?pretty;
+            sleep 86400;
+          done;
+        env:
+          - name: ELASTICSEARCH_USERNAME
+            value: elastic
+          - name: ELASTICSEARCH_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: efk-config
+                key: ELASTICSEARCH_PASSWORD
+          - name: ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES
+            value: "/tmp/ca/ca.crt"
+        ports:
+        - containerPort: 5601
+        volumeMounts:
+        - mountPath: /tmp
+          subPath: certs
+          name: efk-storage
+      volumes:
+        - name: efk-storage
+          persistentVolumeClaim:
+            claimName: efk-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+spec:
+  ports:
+  - port: 5601
+    targetPort: 5601
+  selector:
+    app: kibana
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kibana
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kibana
+            port:
+              number: 5601
+
+

@@ -341,10 +341,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - kibana.livemore.app
+    - kibana.mydomain.app
     secretName: cf-tls-livemore
   rules:
-  - host: kibana.livemore.app
+  - host: kibana.mydomain.app
     http:
       paths:
       - path: /
