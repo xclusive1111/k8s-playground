@@ -11,7 +11,7 @@ Clone this repository and execute `vagrant up` at the root directory. This does 
   | VM       | VM Name       | Purpose      | IP            | Forwarded Port |
   | -------- | ------------- | ------------ | ------------- | -------------- |
   | master-1 | kube-master-1 | Master       | 192.168.33.10 | 3210           |
-  | master-2 | kube-master-2 | Master       | 192.168.33.11 | 3111           |
+  | master-2 | kube-master-2 | Master       | 192.168.33.11 | 3211           |
   | master-3 | kube-master-2 | Master       | 192.168.33.12 | 3212           |
   | worker-1 | kube-worker-1 | Worker       | 192.168.33.20 | 3220           |
   | worker-2 | kube-worker-2 | Worker       | 192.168.33.21 | 3221           |
